@@ -69,3 +69,62 @@ def riempi_blocchi_3x3_casualmente(sudoku, lista_blocchi):
                 blocco_corrente = sudoku[blocco[0][0]:(blocco[-1][0]+1),blocco[0][1]:(blocco[-1][1]+1)]
                 sudoku[casella[0],casella[1]] = choice([i for i in range(1,10) if i not in blocco_corrente])
     return sudoku
+
+def somma_di_un_blocco(sudoku, un_blocco):
+    somma_finale = 0
+    for casella in un_blocco:
+        somma_finale += sudoku[casella[0], casella[1]]
+    return(somma_finale)
+
+def due_caselle_casuali_nel_blocco(sudoku_fisso, blocco):
+    while (1):
+        prima_casella = random.choice(blocco)
+        seconda_casella = choice([casella for casella in blocco if casella is not prima_casella ])
+
+        if sudoku_fisso[prima_casella[0], prima_casella[1]] != 1 and sudoku_fisso[seconda_casella[0], seconda_casella[1]] != 1:
+            return([prima_casella, seconda_casella])
+
+def scambia_caselle(sudoku, caselle_da_scambiare):
+    sudoku_proposto = np.copy(sudoku)
+    segnaposto = sudoku_proposto[caselle_da_scambiare[0][0], caselle_da_scambiare[0][1]]
+    sudoku_proposto[caselle_da_scambiare[0][0], caselle_da_scambiare[0][1]] = sudoku_proposto[caselle_da_scambiare[1][0], caselle_da_scambiare[1][1]]
+    sudoku_proposto[caselle_da_scambiare[1][0], caselle_da_scambiare[1][1]] = segnaposto
+    return (sudoku_proposto)
+
+def stato_proposto(sudoku, sudoku_fisso, lista_blocchi):
+    blocco_casuale = random.choice(lista_blocchi)
+
+    if somma_di_un_blocco(sudoku_fisso, blocco_casuale) > 6:  
+        return(sudoku, 1, 1)
+    caselle_da_scambiare = due_caselle_casuali_nel_blocco(sudoku_fisso, blocco_casuale)
+    sudoku_proposto = scambia_caselle(sudoku,  caselle_da_scambiare)
+    return([sudoku_proposto, caselle_da_scambiare])
+
+def scegli_nuovo_stato(sudoku_corrente, sudoku_fisso, lista_blocchi, sigma):
+    proposta = stato_proposto(sudoku_corrente, sudoku_fisso, lista_blocchi)
+    nuovo_sudoku = proposta[0]
+    caselle_da_controllare = proposta[1]
+    costo_corrente = calcola_errori_riga_colonna(caselle_da_controllare[0][0], caselle_da_controllare[0][1], sudoku_corrente) + calcola_errori_riga_colonna(caselle_da_controllare[1][0], caselle_da_controllare[1][1], sudoku_corrente)
+    nuovo_costo = calcola_errori_riga_colonna(caselle_da_controllare[0][0], caselle_da_controllare[0][1], nuovo_sudoku) + calcola_errori_riga_colonna(caselle_da_controllare[1][0], caselle_da_controllare[1][1], nuovo_sudoku)
+    costo_differenza = nuovo_costo - costo_corrente
+    rho = math.exp(-costo_differenza/sigma)
+    if(np.random.uniform(1,0,1) < rho):
+        return([nuovo_sudoku, costo_differenza])
+    return([sudoku_corrente, 0])
+
+
+def scegli_numero_iterazioni(sudoku_fisso):
+    numero_iterazioni = 0
+    for i in range (0,9):
+        for j in range (0,9):
+            if sudoku_fisso[i,j] != 0:
+                numero_iterazioni += 1
+    return numero_iterazioni
+
+def calcola_sigma_iniziale(sudoku, sudoku_fisso, lista_blocchi):
+    lista_differenze = []
+    tmp_sudoku = sudoku
+    for i in range(1,10):
+        tmp_sudoku = stato_proposto(tmp_sudoku, sudoku_fisso, lista_blocchi)[0]
+        lista_differenze.append(calcola_numero_errori(tmp_sudoku))
+    return (statistics.pstdev(lista_differenze))
