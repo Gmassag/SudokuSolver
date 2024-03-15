@@ -128,3 +128,51 @@ def calcola_sigma_iniziale(sudoku, sudoku_fisso, lista_blocchi):
         tmp_sudoku = stato_proposto(tmp_sudoku, sudoku_fisso, lista_blocchi)[0]
         lista_differenze.append(calcola_numero_errori(tmp_sudoku))
     return (statistics.pstdev(lista_differenze))
+
+def risolvi_sudoku(sudoku):
+    soluzione_trovata = 0
+    while (soluzione_trovata == 0):
+        fattore_riduzione = 0.99
+        conteggio_bloccato = 0
+        sudoku_fisso = np.copy(sudoku)
+        stampa_sudoku(sudoku)
+        fissa_valori_sudoku(sudoku_fisso)
+        lista_blocchi = crea_blocchi_3x3()
+        tmp_sudoku = riempi_blocchi_3x3_casualmente(sudoku, lista_blocchi)
+        sigma = calcola_sigma_iniziale(sudoku, sudoku_fisso, lista_blocchi)
+        punteggio = calcola_numero_errori(tmp_sudoku)
+        iterazioni = scegli_numero_iterazioni(sudoku_fisso)
+        if punteggio <= 0:
+            soluzione_trovata = 1
+
+        while soluzione_trovata == 0:
+            punteggio_precedente = punteggio
+            for i in range (0, iterazioni):
+                nuovo_stato = scegli_nuovo_stato(tmp_sudoku, sudoku_fisso, lista_blocchi, sigma)
+                tmp_sudoku = nuovo_stato[0]
+                diff_punteggio = nuovo_stato[1]
+                punteggio += diff_punteggio
+                print(punteggio)
+                if punteggio <= 0:
+                    soluzione_trovata = 1
+                    break
+
+            sigma *= fattore_riduzione
+            if punteggio <= 0:
+                soluzione_trovata = 1
+                break
+            if punteggio >= punteggio_precedente:
+                conteggio_bloccato += 1
+            else:
+                conteggio_bloccato = 0
+            if (conteggio_bloccato > 80):
+                sigma += 2
+            if(calcola_numero_errori(tmp_sudoku)==0):
+                stampa_sudoku(tmp_sudoku)
+                break
+    return(tmp_sudoku)
+
+# Main
+soluzione = risolvi_sudoku(sudoku)
+print(calcola_numero_errori(soluzione))
+stampa_sudoku(soluzione)
